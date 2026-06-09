@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Message Board</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:#0e0e1a;color:#e0dff0;font-family:'Inter',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+    .page{display:none;width:100%;max-width:520px;flex-direction:column;align-items:center;}
+    .page.active{display:flex;}
+    .badge{display:inline-flex;align-items:center;gap:7px;background:#1e1a3a;border:1px solid #3a2f6a;border-radius:999px;padding:6px 16px;font-size:13px;font-weight:500;color:#c4b5fd;margin-bottom:28px;}
+    h1{font-size:clamp(36px,7vw,58px);font-weight:800;letter-spacing:-0.02em;text-align:center;margin-bottom:10px;}
+    h1 span{color:#a855f7;}
+    .subtitle{font-size:14px;color:#7874a0;margin-bottom:36px;text-align:center;}
+    .card{background:linear-gradient(145deg,#161625,#11111e);border:1px solid #252540;border-radius:16px;padding:28px 26px;width:100%;}
+    .card-title{font-size:18px;font-weight:700;margin-bottom:6px;}
+    .card-bar{width:36px;height:3px;background:linear-gradient(90deg,#7c3aed,#a855f7);border-radius:2px;margin-bottom:24px;}
+    .field{margin-bottom:18px;}
+    .field label{display:block;font-size:11px;font-weight:600;color:#7874a0;text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;}
+    input,textarea{width:100%;background:#0c0c18;border:1px solid #252540;border-radius:8px;color:#e0dff0;font-family:'Inter',sans-serif;font-size:14px;padding:12px 14px;outline:none;transition:border-color .2s,box-shadow .2s;}
+    input::placeholder,textarea::placeholder{color:#2e2c4a;}
+    input:focus,textarea:focus{border-color:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,.15);}
+    textarea{resize:vertical;min-height:110px;line-height:1.6;}
+    .msg-wrap{position:relative;}
+    .msg-prefix{position:absolute;top:13px;left:14px;font-size:14px;color:#a855f7;font-weight:600;pointer-events:none;z-index:2;}
+    .msg-wrap textarea{padding-left:26px;}
+    .char-count{font-size:11px;color:#3d3a5a;text-align:right;margin-top:4px;}
+    .btn{width:100%;padding:14px;background:linear-gradient(135deg,#7c3aed,#9d4edd);border:none;border-radius:10px;color:#fff;font-family:'Inter',sans-serif;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:opacity .2s,transform .15s;box-shadow:0 4px 20px rgba(124,58,237,.3);}
+    .btn:hover{opacity:.9;transform:translateY(-1px);}
+    .btn:active{transform:translateY(0);}
+    .btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;}
+    .error-msg{font-size:13px;color:#f87171;margin-top:8px;min-height:18px;}
+    .dash-page{display:none;width:100%;max-width:700px;}
+    .dash-page.active{display:block;}
+    .dash-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;}
+    .dash-header h2{font-size:22px;font-weight:700;}
+    .btn-sm{padding:8px 16px;font-size:13px;font-weight:600;background:transparent;border:1px solid #252540;color:#8884a8;border-radius:8px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;}
+    .btn-sm:hover{border-color:#ef4444;color:#f87171;}
+    .dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:24px;}
+    @media(max-width:600px){.dash-grid{grid-template-columns:1fr;}}
+    .stat-card{background:linear-gradient(145deg,#161625,#11111e);border:1px solid #252540;border-radius:12px;padding:20px;}
+    .stat-card .sc-label{font-size:12px;color:#7874a0;font-weight:500;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;}
+    .stat-card .sc-val{font-size:28px;font-weight:800;color:#e0dff0;}
+    .stat-card .sc-sub{font-size:12px;color:#4a4870;margin-top:4px;}
+    .section-card{background:linear-gradient(145deg,#161625,#11111e);border:1px solid #252540;border-radius:14px;padding:24px;margin-bottom:18px;}
+    .section-card h3{font-size:16px;font-weight:700;margin-bottom:6px;}
+    .section-card .sc-bar{width:28px;height:3px;background:linear-gradient(90deg,#7c3aed,#a855f7);border-radius:2px;margin-bottom:18px;}
+    .wh-status{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#0c0c18;border:1px solid #252540;border-radius:8px;margin-bottom:16px;font-size:13px;}
+    .wh-dot{width:8px;height:8px;border-radius:50%;background:#4a4870;flex-shrink:0;}
+    .wh-dot.on{background:#22c55e;box-shadow:0 0 6px rgba(34,197,94,.5);animation:pulse 2s infinite;}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    .wh-url-display{flex:1;color:#8884a8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .msg-list{display:flex;flex-direction:column;gap:10px;max-height:320px;overflow-y:auto;padding-right:4px;}
+    .msg-list::-webkit-scrollbar{width:4px;}
+    .msg-list::-webkit-scrollbar-track{background:#0c0c18;}
+    .msg-list::-webkit-scrollbar-thumb{background:#252540;border-radius:4px;}
+    .msg-item{background:#0c0c18;border:1px solid #1e1e35;border-radius:8px;padding:12px 14px;}
+    .msg-item .mi-text{font-size:14px;color:#e0dff0;margin-bottom:6px;line-height:1.5;}
+    .msg-item .mi-meta{font-size:11px;color:#4a4870;display:flex;gap:16px;}
+    .mi-ok{color:#22c55e;} .mi-err{color:#ef4444;}
+    .empty-list{text-align:center;padding:32px;color:#3d3a5a;font-size:14px;}
+    .btn-save{padding:11px 22px;background:linear-gradient(135deg,#7c3aed,#9d4edd);border:none;border-radius:8px;color:#fff;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:opacity .2s;}
+    .btn-save:hover{opacity:.88;}
+    .toast{position:fixed;bottom:24px;right:24px;background:#161625;border:1px solid #252540;border-radius:10px;padding:12px 18px;font-size:14px;font-weight:500;display:flex;align-items:center;gap:10px;opacity:0;pointer-events:none;transition:all .3s cubic-bezier(.34,1.56,.64,1);z-index:9999;transform:translateY(10px);box-shadow:0 8px 40px rgba(0,0,0,.5);}
+    .toast.show{opacity:1;transform:translateY(0);}
+    .toast.success{border-color:#22c55e;color:#4ade80;}
+    .toast.error{border-color:#ef4444;color:#f87171;}
+    .link-btn{background:none;border:none;color:#a855f7;font-family:'Inter',sans-serif;font-size:13px;cursor:pointer;text-decoration:underline;padding:0;}
+    .link-btn:hover{color:#c4b5fd;}
+    @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+
+<!-- PAGE PUBLIC -->
+<div class="page active" id="page-public">
+  <div class="badge">✉️ Message Board</div>
+  <h1>Envoie un <span>message</span></h1>
+  <p class="subtitle">Partage ce que tu penses — ton message sera transmis directement.</p>
+  <div class="card">
+    <div class="card-title">Ton message</div>
+    <div class="card-bar"></div>
+    <div class="field">
+      <label>Message</label>
+      <div class="msg-wrap">
+        <span class="msg-prefix">Je</span>
+        <textarea id="pub-msg" placeholder="… suis content de ce projet !" oninput="pubCount()"></textarea>
+      </div>
+      <div class="char-count"><span id="pub-char">0</span> / 2000</div>
+    </div>
+    <div class="error-msg" id="pub-error"></div>
+    <button class="btn" id="pub-btn" onclick="sendPublic()">
+      <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      Envoyer
+    </button>
+  </div>
+</div>
+
+<!-- PAGE LOGIN -->
+<div class="page" id="page-login">
+  <div class="badge">🔒 Espace Admin</div>
+  <h1>Admin <span>Panel</span></h1>
+  <p class="subtitle">Connecte-toi pour accéder au dashboard.</p>
+  <div class="card">
+    <div class="card-title">Connexion</div>
+    <div class="card-bar"></div>
+    <div class="field">
+      <label>Mot de passe</label>
+      <input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" />
+    </div>
+    <div class="error-msg" id="login-error"></div>
+    <button class="btn" onclick="doLogin()">
+      <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+      Se connecter
+    </button>
+    <div style="margin-top:18px;text-align:center;">
+      <button class="link-btn" onclick="showPage('page-public')">← Retour</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE DASHBOARD -->
+<div class="dash-page" id="page-dash">
+  <div class="dash-header">
+    <div>
+      <div class="badge" style="margin-bottom:8px;">⚙️ Dashboard Admin</div>
+      <h2>Tableau de bord</h2>
+    </div>
+    <button class="btn-sm" onclick="logout()">Se déconnecter</button>
+  </div>
+
+  <div class="dash-grid">
+    <div class="stat-card">
+      <div class="sc-label">Messages envoyés</div>
+      <div class="sc-val" id="stat-total">0</div>
+      <div class="sc-sub">depuis le début</div>
+    </div>
+    <div class="stat-card">
+      <div class="sc-label">Succès</div>
+      <div class="sc-val" id="stat-ok" style="color:#22c55e">0</div>
+      <div class="sc-sub">transmis au webhook</div>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <h3>Configuration Webhook</h3>
+    <div class="sc-bar"></div>
+    <div class="wh-status">
+      <div class="wh-dot" id="wh-dot"></div>
+      <div class="wh-url-display" id="wh-url-display">Aucun webhook configuré</div>
+    </div>
+    <div class="field">
+      <label>URL du Webhook Discord</label>
+      <input type="text" id="wh-input" placeholder="https://discord.com/api/webhooks/..." />
+    </div>
+    <div class="field">
+      <label>Nom du bot</label>
+      <input type="text" id="wh-botname" placeholder="Message Board" />
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <button class="btn-save" onclick="saveWebhook()">💾 Sauvegarder</button>
+      <button class="btn-sm" style="border-color:#252540" onclick="testAdminWebhook()">Tester</button>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <h3>Changer le mot de passe</h3>
+    <div class="sc-bar"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div class="field" style="margin:0"><label>Nouveau</label><input type="password" id="new-pass" placeholder="••••••••" /></div>
+      <div class="field" style="margin:0"><label>Confirmer</label><input type="password" id="new-pass2" placeholder="••••••••" /></div>
+    </div>
+    <div class="error-msg" id="pass-error"></div>
+    <button class="btn-save" style="margin-top:14px" onclick="changePass()">Mettre à jour</button>
+  </div>
+
+  <div class="section-card">
+    <h3>Messages reçus</h3>
+    <div class="sc-bar"></div>
+    <div class="msg-list" id="msg-list"><div class="empty-list">Aucun message pour l'instant.</div></div>
+    <button class="btn-sm" style="margin-top:14px;border-color:#3d0000;color:#f87171" onclick="clearLogs()">Vider l'historique</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ===== ÉTAT EN MÉMOIRE (pas de localStorage) =====
+  var ADMIN_PASS = '123';
+  var webhookUrl = '';
+  var botName    = 'Message Board';
+  var logs       = [];
+  var isLogged   = false;
+
+  // ===== NAVIGATION =====
+  function showPage(id) {
+    document.querySelectorAll('.page, .dash-page').forEach(function(p){ p.classList.remove('active'); });
+    document.getElementById(id).classList.add('active');
+  }
+
+  function logout() {
+    isLogged = false;
+    showPage('page-public');
+    showToast('Déconnecté.', 'success');
+  }
+
+  // ===== LOGIN =====
+  function doLogin() {
+    var pass = document.getElementById('login-pass').value;
+    var err  = document.getElementById('login-error');
+    if (pass === ADMIN_PASS) {
+      isLogged = true;
+      err.textContent = '';
+      document.getElementById('login-pass').value = '';
+      loadDash();
+      showPage('page-dash');
+    } else {
+      err.textContent = 'Mot de passe incorrect.';
+      document.getElementById('login-pass').value = '';
+    }
+  }
+
+  // ===== DASHBOARD =====
+  function loadDash() {
+    document.getElementById('wh-input').value   = webhookUrl;
+    document.getElementById('wh-botname').value = botName;
+    var dot  = document.getElementById('wh-dot');
+    var disp = document.getElementById('wh-url-display');
+    if (webhookUrl) {
+      dot.className = 'wh-dot on';
+      disp.textContent = webhookUrl;
+      disp.style.color = '#e0dff0';
+    } else {
+      dot.className = 'wh-dot';
+      disp.textContent = 'Aucun webhook configuré';
+      disp.style.color = '';
+    }
+    renderLogs();
+  }
+
+  function saveWebhook() {
+    var url = document.getElementById('wh-input').value.trim();
+    var bot = document.getElementById('wh-botname').value.trim() || 'Message Board';
+    if (url && !url.startsWith('https://discord.com/api/webhooks/')) {
+      showToast('URL invalide', 'error'); return;
+    }
+    webhookUrl = url;
+    botName    = bot;
+    loadDash();
+    showToast('Webhook sauvegardé !', 'success');
+  }
+
+  async function testAdminWebhook() {
+    if (!webhookUrl) { showToast('Aucun webhook configuré', 'error'); return; }
+    try {
+      var r = await fetch(webhookUrl);
+      r.ok ? showToast('Webhook valide !', 'success') : showToast('Webhook introuvable', 'error');
+    } catch(e) { showToast('Erreur réseau', 'error'); }
+  }
+
+  function changePass() {
+    var p1  = document.getElementById('new-pass').value;
+    var p2  = document.getElementById('new-pass2').value;
+    var err = document.getElementById('pass-error');
+    if (!p1) { err.textContent = 'Mot de passe vide.'; return; }
+    if (p1 !== p2) { err.textContent = 'Les mots de passe ne correspondent pas.'; return; }
+    ADMIN_PASS = p1;
+    err.textContent = '';
+    document.getElementById('new-pass').value  = '';
+    document.getElementById('new-pass2').value = '';
+    showToast('Mot de passe mis à jour !', 'success');
+  }
+
+  function renderLogs() {
+    var total = logs.length;
+    var ok    = logs.filter(function(l){ return l.ok; }).length;
+    document.getElementById('stat-total').textContent = total;
+    document.getElementById('stat-ok').textContent    = ok;
+    var list = document.getElementById('msg-list');
+    if (!logs.length) {
+      list.innerHTML = '<div class="empty-list">Aucun message pour l\'instant.</div>';
+      return;
+    }
+    list.innerHTML = logs.slice().reverse().map(function(l){
+      return '<div class="msg-item"><div class="mi-text">'+esc(l.msg)+'</div><div class="mi-meta"><span>'+l.date+'</span><span class="'+(l.ok?'mi-ok':'mi-err')+'">'+(l.ok?'✓ Envoyé':'✗ Erreur')+'</span></div></div>';
+    }).join('');
+  }
+
+  function clearLogs() {
+    if (!confirm('Vider tout l\'historique ?')) return;
+    logs = [];
+    renderLogs();
+    showToast('Historique vidé.', 'success');
+  }
+
+  function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ===== PAGE PUBLIQUE =====
+  function pubCount() {
+    document.getElementById('pub-char').textContent = document.getElementById('pub-msg').value.length;
+  }
+
+  async function sendPublic() {
+    var raw = document.getElementById('pub-msg').value.trim();
+    var err = document.getElementById('pub-error');
+    var btn = document.getElementById('pub-btn');
+    err.textContent = '';
+    if (!raw) { err.textContent = 'Écris un message avant d\'envoyer.'; return; }
+    if (raw.length > 1994) { err.textContent = 'Message trop long.'; return; }
+    if (!webhookUrl) { err.textContent = 'Le service n\'est pas encore configuré.'; return; }
+
+    var fullMsg = 'Je ' + raw;
+    btn.disabled = true;
+    btn.innerHTML = '<svg width="16" height="16" fill="white" viewBox="0 0 24 24" style="animation:spin 1s linear infinite"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg> Envoi…';
+
+    var ok = false;
+    try {
+      var res = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({content: fullMsg, username: botName})
+      });
+      ok = (res.status === 204 || res.ok);
+    } catch(e) {}
+
+    logs.push({msg: fullMsg, date: new Date().toLocaleString('fr-FR'), ok: ok});
+
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg> Envoyer';
+
+    if (ok) {
+      document.getElementById('pub-msg').value = '';
+      pubCount();
+      showToast('Message envoyé !', 'success');
+    } else {
+      err.textContent = 'Erreur lors de l\'envoi. Réessaie.';
+    }
+  }
+
+  // ===== TOAST =====
+  function showToast(msg, type) {
+    var t = document.getElementById('toast');
+    t.textContent = (type === 'success' ? '✅  ' : '❌  ') + msg;
+    t.className = 'toast show ' + type;
+    setTimeout(function(){ t.className = 'toast'; }, 3500);
+  }
+
+  // ===== CTRL+P SECRET =====
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'p') {
+      e.preventDefault();
+      showPage('page-login');
+      setTimeout(function(){ document.getElementById('login-pass').focus(); }, 50);
+    }
+  });
+</script>
+</body>
+</html>
